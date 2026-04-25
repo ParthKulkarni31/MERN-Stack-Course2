@@ -123,7 +123,7 @@ function HomePage() {
       />
       
 
-      <h2 className='text-danger text-center my-5'>CRUD</h2>
+      <h2 className='text-danger text-center my-5'><b>Manage Items</b></h2>
 
       <div className='container'>
         <div className='row'>
