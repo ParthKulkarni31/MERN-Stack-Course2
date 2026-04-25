@@ -20,6 +20,14 @@ function Item() {
   const [unit, setUnit] = useState();
   const [itemData, setItemData] = useState();
 
+
+
+
+  const getToken = () => {
+    const token = localStorage.getItem("token"); 
+    return token;
+  };
+
   async function SubmitForm(e) {
 
     try {
@@ -38,7 +46,9 @@ function Item() {
       console.log(data, "Form Submitted");
 
       const apiResponse = await axios.post(`${import.meta.env.VITE_API_URL_BACKEND}/create-item`,
-        data
+        data , {
+          headers : { " x-auth-token " : getToken()}
+        }
       )
         .then(console.log("yes"))
         .catch((error) => console.log(error))
@@ -75,6 +85,7 @@ function Item() {
   }
   useEffect(() => {
     getAllItemsData();
+    getToken();
   }, []);
   console.log(itemData, "itemData==>")
 
