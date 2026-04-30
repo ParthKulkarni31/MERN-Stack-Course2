@@ -1,72 +1,97 @@
-require('dotenv').config()        // or import 'dotenv/config' // for esm
-console.log(process.env.PORT , "===>")          // remove this after you've confirmed that it is working
-// Backend Project // Node js  // Express Js // DB - MongoDb  
-// Import Express framework (used to create server and APIs)
+// dotenv loads our secret values from .env file into process.env
+// We call this at the very top so all files can use process.env values
+require('dotenv').config()
+
+// express is a Node.js framework that helps us create a backend server easily
 const express = require('express')
-// Create express application instance
+
+// app is our main server object - we use it to create routes and start server
 const app = express()
-// Import CORS library (allows frontend apps to call backend APIs)
+
+// cors allows our frontend (running on different port) to talk to this backend
+// Without cors, browser will block the request
 const cors = require('cors')
+
+// Import connectDB function from db.js to connect to MongoDB database
 const { connectDB } = require('./config/db')
-const { addItem , editItem , deleteItem , getAllItems } = require('./controllers/itemsControllers')
+
+// Import item controller functions (add, edit, delete, getAll)
+const { addItem, editItem, deleteItem, getAllItems } = require('./controllers/itemsControllers')
+
+// Import auth controller functions (login, register)
 const { login, register } = require('./controllers/authControllers')
+
+// Import dashboard controller function
 const { getDashboardCount } = require('./controllers/dashboardControllers')
+
+// Import authMiddleware - this checks if user has a valid token before allowing access
 const authMiddleware = require('./authMiddleware/authMiddleware')
-// Middleware: convert incoming request data into JSON format
+
+// ----------------------
+// Middleware Setup
+// ----------------------
+
+// express.json() allows our server to read JSON data sent from frontend
+// Without this, req.body will be undefined
 app.use(express.json())
-// Middleware: enable Cross-Origin Resource Sharing
+
+// cors() allows all frontend origins to call this backend
+// Without this, browser blocks requests from different ports
 app.use(cors())
-// ----------------------
-// MongoDB Database Connection
-// ----------------------
+
+// Connect to MongoDB database when server starts
 connectDB()
 
+// ----------------------
+// Auth Routes - No token needed for these
+// ----------------------
 
+// POST /api/login - user sends email and password, gets token back
+app.post("/api/login", login)
 
+// POST /api/register - user sends name, email, password, gets token back
+app.post("/api/register", register)
 
-// Auth API's = authentication API
+// ----------------------
+// Items Routes - Token required (authMiddleware runs first)
+// ----------------------
 
-app.post("/api/login" , login)
-app.post("/api/register" , register)
-
-
-
-
-// Items API
-// POST API to create new item
+// POST /api/create-item - add a new item to database
+// authMiddleware runs first to check token, then addItem runs
 app.post("/api/create-item", authMiddleware, addItem)
-// PUT API used to update existing item
-app.put("/api/update-item", editItem)
-// DELETE API to remove item from database
-app.delete("/api/delete-item/:id", deleteItem)
-// GET API to fetch all items from database
-app.get("/api/get-all-item", getAllItems)
 
+// GET /api/get-all-item - get all items of logged-in user
+app.get("/api/get-all-item", authMiddleware, getAllItems)
 
+// PUT /api/update-item - update an existing item
+app.put("/api/update-item", authMiddleware, editItem)
 
+// DELETE /api/delete-item/:id - delete item by its ID
+// :id means the item ID comes from the URL like /delete-item/abc123
+app.delete("/api/delete-item/:id", authMiddleware, deleteItem)
 
-// Dashboard API's
-// get all count to show on dashboard 
-app.get("/api/get-dashboard" , getDashboardCount)
+// ----------------------
+// Dashboard Route - Token required
+// ----------------------
 
+// GET /api/get-dashboard - get total counts for dashboard page
+app.get("/api/get-dashboard", authMiddleware, getDashboardCount)
 
-
-
-// Simple API to check server is running or not
-app.get("/health", (req, res) => {
-    res.status(200).json({
-        message: "Server is Runing"
-    })
+// ----------------------
+// Health Check Route - just to test if server is running
+// ----------------------
+app.get("/api/health", (req, res) => {
+    res.status(200).json({ message: "Server is Running" })
 })
 
+// ----------------------
+// Start Server
+// ----------------------
 
-// ----------------------
-// Server Start
-// ----------------------
-// Define port number where server will run
-const PORT = 9090
-// Start express server
+// Read PORT from .env file, if not found use 1010 as default
+const PORT = process.env.PORT || 1010
+
+// Start the server and listen for incoming requests on the PORT
 app.listen(PORT, () => {
-    // Show message when server starts
-    console.log(`Server is running ${PORT}`)
+    console.log(`Server is running on port ${PORT}`)
 })
